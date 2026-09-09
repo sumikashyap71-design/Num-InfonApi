@@ -3,7 +3,7 @@
 // ==========================================
 
 module.exports = async (req, res) => {
-    // CORS
+    // CORS Headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -22,7 +22,7 @@ module.exports = async (req, res) => {
     const { key, num, number, Astha } = req.query;
     const mobileNumber = num || number || Astha;
 
-    // 🔥 APNI SECRET KEY (change karo)
+    // 🔥 YOUR SECRET KEY
     const VALID_KEY = 'UNIQVERCEL';
 
     // 1️⃣ API Key Check
@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
     if (!mobileNumber) {
         return res.status(400).json({
             status: 'error',
-            message: 'Missing number parameter.',
+            message: 'Missing number parameter. Use: ?key=YOUR_KEY&num=NUMBER',
             credit: '@Qfrexx'
         });
     }
@@ -48,12 +48,12 @@ module.exports = async (req, res) => {
     if (cleanNum.length < 10) {
         return res.status(400).json({
             status: 'error',
-            message: 'Invalid number. Minimum 10 digits.',
+            message: 'Invalid number. Minimum 10 digits required.',
             credit: '@Qfrexx'
         });
     }
 
-    // 4️⃣ Fetch Data (Static + External)
+    // 4️⃣ Fetch Data
     try {
         const data = await fetchNumberData(cleanNum);
         
@@ -86,9 +86,7 @@ module.exports = async (req, res) => {
 // 🔥 DATA SOURCE — STATIC + EXTERNAL API
 // ==========================================
 async function fetchNumberData(number) {
-    const axios = require('axios');
-    
-    // 📌 1️⃣ PEHLE APNE STATIC DATA ME CHECK KARO
+    // 📌 1️⃣ STATIC DATA (Optional)
     const staticData = {
         '9661990774': {
             mobile: '9661990774',
@@ -99,16 +97,24 @@ async function fetchNumberData(number) {
             circle: 'BIHAR JIO',
             aadhar: '293649586679',
             email: 'N/A'
+        },
+        '9876543210': {
+            mobile: '9876543210',
+            name: 'Demo User',
+            fname: 'Demo Father',
+            address: '!123!Demo Street!Demo City!Demo State!123456',
+            alt: '9876543211',
+            circle: 'JIO DEMO',
+            aadhar: '123456789012',
+            email: 'demo@email.com'
         }
-        // 🔥 Yahan aur numbers daal sakte ho (optional)
     };
     if (staticData[number]) return staticData[number];
 
-    // 📌 2️⃣ AGAR STATIC ME NAHI MILA TO EXTERNAL API SE LAO
+    // 📌 2️⃣ EXTERNAL APIS
     const externalApis = [
         {
-            url: 'https://shuruu-num-to-info-welcome-api-7-da.vercel.app/apis/num_info_v1',
-            params: { key: 'WELCOME', num: number },
+            url: `https://shuruu-num-to-info-welcome-api-7-da.vercel.app/apis/num_info_v1?key=WELCOME&num=${number}`,
             parse: (res) => {
                 if (res.status === 'success' && res.result && res.result.length > 0) {
                     const d = res.result[0];
@@ -127,8 +133,7 @@ async function fetchNumberData(number) {
             }
         },
         {
-            url: 'https://num-to-info-reseller.asurpapa.workers.dev/api',
-            params: { key: 'Free-Russian', number: number },
+            url: `https://num-to-info-reseller.asurpapa.workers.dev/api?key=Free-Russian&number=${number}`,
             parse: (res) => {
                 if (res.status === true && res.data && res.data.data) {
                     const d = res.data.data;
@@ -147,8 +152,7 @@ async function fetchNumberData(number) {
             }
         },
         {
-            url: 'https://astha-9vd8.onrender.com/tapi-c3177593b1359e00d0e6c1a2d2cc6408',
-            params: { Astha: number },
+            url: `https://astha-9vd8.onrender.com/tapi-c3177593b1359e00d0e6c1a2d2cc6408?Astha=${number}`,
             parse: (res) => {
                 if (res.status !== 'error' && res.data) {
                     const d = res.data;
@@ -171,9 +175,15 @@ async function fetchNumberData(number) {
     // 🔥 SAB EXTERNAL APIS KO TRY KARO
     for (const api of externalApis) {
         try {
-            const response = await axios.get(api.url, { params: api.params, timeout: 8000 });
-            if (response.data) {
-                const parsed = api.parse(response.data);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 8000);
+            
+            const response = await fetch(api.url, { signal: controller.signal });
+            clearTimeout(timeout);
+            
+            if (response.ok) {
+                const data = await response.json();
+                const parsed = api.parse(data);
                 if (parsed) return parsed;
             }
         } catch (e) {
@@ -181,6 +191,5 @@ async function fetchNumberData(number) {
         }
     }
 
-    // 📌 3️⃣ KUCH NAHI MILA TO NULL
     return null;
 }

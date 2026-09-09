@@ -1,0 +1,10 @@
+{
+  "name": "number-api",
+  "version": "1.0.0",
+  "description": "Number Info API by @Qfrexx",
+  "main": "api/number.js",
+  "scripts": {
+    "start": "node api/number.js"
+  },
+  "dependencies": {}
+}
